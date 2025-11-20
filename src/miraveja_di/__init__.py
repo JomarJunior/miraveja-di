@@ -5,13 +5,13 @@ Public API exports for the miraveja-di package.
 """
 
 # Application exports
-from miraveja_di.application.container import DIContainer
+from miraveja_di.application import DIContainer
 
 # Domain exports
-from miraveja_di.domain.enums import Lifetime
-from miraveja_di.domain.exceptions import (
+from miraveja_di.domain import (
     CircularDependencyError,
     DIException,
+    Lifetime,
     LifetimeError,
     ScopeError,
     UnresolvableError,
