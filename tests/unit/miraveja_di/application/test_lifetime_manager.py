@@ -3,7 +3,7 @@
 import pytest
 
 from miraveja_di.application.lifetime_manager import LifetimeManager
-from miraveja_di.domain import DependencyMetadata, Lifetime, Registration
+from miraveja_di.domain import DependencyMetadata, Lifetime, Registration, UnresolvableError
 
 
 class TestLifetimeManagerInitialization:
@@ -488,7 +488,8 @@ class TestLifetimeManagerEdgeCases:
         def failing_factory():
             raise ValueError("Factory failed")
 
-        with pytest.raises(ValueError, match="Factory failed"):
+        # Should wrap ValueError in UnresolvableError
+        with pytest.raises(UnresolvableError, match="Failed to create instance"):
             manager.get_or_create(metadata, failing_factory)
 
         # Should not be cached

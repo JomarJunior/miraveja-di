@@ -616,7 +616,9 @@ class TestBuilderExecution:
         assert instance.config.connection_string == "test_db"
 
     def test_builder_exception_wrapped_in_unresolvable_error(self):
-        """Test that builder exceptions are caught during resolution."""
+        """Test that builder exceptions are caught and wrapped in UnresolvableError."""
+        from miraveja_di.domain import UnresolvableError
+
         container = DIContainer()
 
         class TestService:
@@ -627,8 +629,8 @@ class TestBuilderExecution:
 
         container.register_singletons({TestService: failing_builder})
 
-        # Should raise the ValueError from builder
-        with pytest.raises(ValueError, match="Builder failed"):
+        # Should wrap ValueError in UnresolvableError
+        with pytest.raises(UnresolvableError, match="Failed to create instance"):
             container.resolve(TestService)
 
 
