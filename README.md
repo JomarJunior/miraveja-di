@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Status](https://img.shields.io/badge/status-planning-yellow.svg)](#-development-status)
+[![Coverage](https://codecov.io/gh/JomarJunior/miraveja-di/branch/main/graph/badge.svg)](https://codecov.io/gh/JomarJunior/miraveja-di)
+[![CI](https://github.com/JomarJunior/miraveja-di/actions/workflows/ci.yml/badge.svg)](https://github.com/JomarJunior/miraveja-di/actions)
 
 > A lightweight, type-hint based Dependency Injection container for Python with auto-wiring capabilities
 
