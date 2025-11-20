@@ -14,6 +14,8 @@ python = "<3.15,>=3.10"
 
 # Type hints compatibility for Python 3.8-3.9
 typing-extensions = "^4.12.0"
+pydantic = "^2.12.4"
+pylint-pydantic = "^0.4.1"
 
 [tool.poetry.group.fastapi]
 optional = true
@@ -71,6 +73,7 @@ attr-naming-style = "snake_case"
 argument-naming-style = "snake_case"
 variable-naming-style = "snake_case"
 good-names = ["miraveja_di", "c", "T", "cls"]
+load-plugins = ["pylint_pydantic"]
 
 [tool.pylint.format]
 max-line-length = 120
