@@ -1,9 +1,10 @@
-from typing import Any, Callable, Dict, Type, TypeVar
+from typing import Any, Callable, Dict, Optional, Type, TypeVar
 
 from miraveja_di.application.circular_detector import CircularDependencyDetector
 from miraveja_di.application.lifetime_manager import LifetimeManager
 from miraveja_di.application.resolver import DependencyResolver
 from miraveja_di.domain import (
+    CircularDependencyError,
     DependencyMetadata,
     IContainer,
     ILifetimeManager,
@@ -11,6 +12,7 @@ from miraveja_di.domain import (
     Lifetime,
     LifetimeError,
     Registration,
+    UnresolvableError,
 )
 
 T = TypeVar("T")
@@ -29,11 +31,15 @@ class DIContainer(IContainer):
         _circular_detector: Component detecting circular dependencies.
     """
 
-    def __init__(self) -> None:
-        """Initialize the DI container with empty registry and domain components."""
+    def __init__(self, parent_singleton_cache: Optional[Dict[Type, Any]] = None) -> None:
+        """Initialize the DI container with empty registry and domain components.
+
+        Args:
+            parent_singleton_cache: Optional parent singleton cache for scoped containers.
+        """
         self._registry: Dict[Type, DependencyMetadata] = {}
         self._resolver: IResolver = DependencyResolver()
-        self._lifetime_manager: ILifetimeManager = LifetimeManager()
+        self._lifetime_manager: ILifetimeManager = LifetimeManager(parent_singleton_cache)
         self._circular_detector = CircularDependencyDetector()
 
     def _register(
@@ -117,6 +123,29 @@ class DIContainer(IContainer):
         for dependency_type, builder in dependencies.items():
             self._register(dependency_type, builder, Lifetime.TRANSIENT)
 
+    def register_scoped(self, dependencies: Dict[Type, Callable[[IContainer], Any]]) -> None:
+        """Register multiple scoped dependencies at once.
+
+        Scoped dependencies are created once per scope (e.g., per HTTP request).
+        Within the same scope, the same instance is returned. Different scopes
+        get different instances.
+
+        Args:
+            dependencies: Dictionary mapping dependency types to builder functions.
+                         Each builder receives the container and returns an instance.
+
+        Raises:
+            LifetimeError: If a dependency is already registered with a different lifetime.
+
+        Example:
+            >>> container.register_scoped({
+            ...     RequestContext: lambda c: RequestContext(),
+            ...     RequestLogger: lambda c: RequestLogger(c.resolve(RequestContext)),
+            ... })
+        """
+        for dependency_type, builder in dependencies.items():
+            self._register(dependency_type, builder, Lifetime.SCOPED)
+
     def resolve(self, dependency_type: type[T]) -> T:
         """Resolve and return an instance of the specified type.
 
@@ -143,12 +172,22 @@ class DIContainer(IContainer):
             # Check if explicitly registered
             if dependency_type in self._registry:
                 metadata = self._registry[dependency_type]
-                instance = self._lifetime_manager.get_or_create(
-                    metadata,
-                    lambda: metadata.registration.builder(self),
-                )
-                metadata.resolution_count += 1
-                return instance
+                try:
+                    instance = self._lifetime_manager.get_or_create(
+                        metadata,
+                        lambda: metadata.registration.builder(self),
+                    )
+                    metadata.resolution_count += 1
+                    return instance
+                except (UnresolvableError, LifetimeError, CircularDependencyError):
+                    # Re-raise known DI exceptions to preserve their specific type and message.
+                    raise
+                except Exception as e:
+                    # Wrap any other unexpected exception in UnresolvableError for context.
+                    raise UnresolvableError(
+                        dependency_type,
+                        f"Failed to build instance of {dependency_type.__name__} during resolution: {e}",
+                    ) from e
 
             # Auto-wire if not registered
             instance = self._resolver.resolve_dependencies(dependency_type, self)
@@ -173,15 +212,15 @@ class DIContainer(IContainer):
         """
         self._registry = registry
 
-    def create_scope(self) -> "IContainer":
+    def create_scope(self) -> "DIContainer":
         """Create a child container for scoped lifetime.
 
-        Scoped containers inherit parent registrations but maintain separate
-        instance caches for scoped dependencies. Useful for per-request state
+        Scoped containers inherit parent registrations and share singleton cache
+        but maintain separate scoped instance caches. Useful for per-request state
         in web applications.
 
         Returns:
-            New container that inherits parent registrations.
+            New container that inherits parent registrations and singleton cache.
 
         Example:
             >>> with container.create_scope() as scoped:
@@ -190,10 +229,34 @@ class DIContainer(IContainer):
             ...     ctx2 = scoped.resolve(RequestContext)
             ...     assert ctx1 is ctx2
         """
-        scoped_container = DIContainer()
+        # Create scoped container that shares parent's singleton cache
+        # Access the concrete LifetimeManager to get singleton cache
+        parent_cache = None
+        if isinstance(self._lifetime_manager, LifetimeManager):
+            parent_cache = self._lifetime_manager.get_singleton_cache()
+        scoped_container = DIContainer(parent_singleton_cache=parent_cache)
         # Inherit parent registrations
         scoped_container.set_registry(self.get_registry_copy())
         return scoped_container
+
+    def __enter__(self) -> "DIContainer":
+        """Enter the context manager for scoped lifetime.
+
+        Returns:
+            Self for use in with statement.
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Exit the context manager and cleanup scoped instances.
+
+        Args:
+            exc_type: Exception type if an error occurred.
+            exc_val: Exception value if an error occurred.
+            exc_tb: Exception traceback if an error occurred.
+        """
+        # Clear scoped cache on exit
+        self._lifetime_manager.clear_scoped_cache()
 
     def clear(self) -> None:
         """Clear all registrations and cached instances.
