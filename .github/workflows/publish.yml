@@ -14,6 +14,13 @@ on:
           - pypi
 
 jobs:
+  # Build Job: Creates distribution packages (.tar.gz and .whl) from source code.
+  # Rationale:
+  #   - Separates build from publish for better security and reusability
+  #   - Built artifacts are shared across all publish jobs via GitHub artifacts
+  #   - Ensures consistent packages across TestPyPI, PyPI, and GitHub releases
+  #   - Single source of truth: build once, publish multiple times
+  #   - Fails fast if build has issues before attempting any publishes
   build:
     name: Build Distribution
     runs-on: ubuntu-latest
@@ -43,6 +50,14 @@ jobs:
           name: python-package-distributions
           path: dist/
 
+  # Publish to TestPyPI Job: Uploads package to PyPI's testing instance.
+  # Rationale:
+  #   - Manual trigger only (workflow_dispatch) - prevents accidental publishes
+  #   - Allows testing package installation and metadata before production
+  #   - Uses skip-existing to allow multiple test uploads without errors
+  #   - Validates trusted publishing configuration before PyPI deployment
+  #   - Isolated from production - failures here don't affect real releases
+  #   - Useful for verifying README rendering, dependencies, and install process
   publish-to-testpypi:
     name: Publish to TestPyPI
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'testpypi'
@@ -70,6 +85,15 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
 
+  # Publish to PyPI Job: Uploads package to production PyPI index.
+  # Rationale:
+  #   - Dual trigger: automatic on GitHub releases OR manual via workflow_dispatch
+  #   - Automatic releases ensure version tags match published versions
+  #   - Manual trigger provides emergency hotfix capability if needed
+  #   - Uses trusted publishing (OIDC) - no API tokens, more secure
+  #   - Environment protection ensures only approved publishes reach production
+  #   - Once published, versions are immutable (cannot be overwritten)
+  #   - Makes package publicly available via `pip install miraveja-di`
   publish-to-pypi:
     name: Publish to PyPI
     if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'pypi')
@@ -94,6 +118,15 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
+  # GitHub Release Job: Attaches signed distribution files to GitHub releases.
+  # Rationale:
+  #   - Only runs on actual releases (not manual triggers) - keeps releases clean
+  #   - Depends on publish-to-pypi succeeding - ensures PyPI and GitHub stay in sync
+  #   - Signs distributions with Sigstore for cryptographic verification
+  #   - Provides alternative download source if PyPI is unavailable
+  #   - Allows users to verify package authenticity via signatures
+  #   - Creates permanent archive of all release artifacts in repository
+  #   - Useful for compliance, auditing, and long-term archival
   github-release:
     name: Upload to GitHub Release
     if: github.event_name == 'release'
@@ -113,7 +146,7 @@ jobs:
           path: dist/
 
       - name: Sign distributions with Sigstore
-        uses: sigstore/gh-action-sigstore-python@v2.1.1
+        uses: sigstore/gh-action-sigstore-python@v3.1.0
         with:
           inputs: >-
             ./dist/*.tar.gz
