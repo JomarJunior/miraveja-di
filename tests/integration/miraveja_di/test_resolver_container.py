@@ -35,6 +35,9 @@ class TestResolverContainerIntegration:
             def get_registry_copy(self):
                 return {}
 
+            def set_registry(self, registry):
+                pass
+
         container = TrackingContainer()
 
         class DatabaseService:
@@ -80,6 +83,9 @@ class TestResolverContainerIntegration:
 
             def get_registry_copy(self):
                 return {}
+
+            def set_registry(self, registry):
+                pass
 
         container = MockContainer()
 

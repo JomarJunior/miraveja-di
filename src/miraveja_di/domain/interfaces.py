@@ -56,6 +56,17 @@ class IContainer(ABC):
     def get_registry_copy(self) -> Dict[Type, DependencyMetadata]:
         """Get a copy of the current registry of dependencies."""
 
+    @abstractmethod
+    def set_registry(self, registry: Dict[Type, DependencyMetadata]) -> None:
+        """Adopt a registry, typically one inherited from a parent container.
+
+        Paired with get_registry_copy(): together they are what lets
+        create_scope() hand a child container the parent's registrations.
+
+        Args:
+            registry: Registry to adopt.
+        """
+
 
 class IResolver(ABC):
     """Abstract interface for dependency resolution operations."""

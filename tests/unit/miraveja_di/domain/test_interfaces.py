@@ -21,32 +21,31 @@ class TestIContainerInterface:
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
             IContainer()
 
-    def test_icontainer_has_register_method(self):
-        """Test that IContainer defines register abstract method."""
-        assert hasattr(IContainer, "register")
-        assert callable(getattr(IContainer, "register"))
+    def test_icontainer_declares_exactly_the_expected_abstract_methods(self):
+        """Test the interface's abstract surface, pinned exactly.
 
-    def test_icontainer_declares_the_full_registration_triad(self):
-        """Test that all three lifetimes are registrable through the interface.
+        Asserted against __abstractmethods__ rather than hasattr(). hasattr is
+        unsafe on an ABC: IContainer inherits ABCMeta.register, so
+        hasattr(IContainer, "register") is True even though no container method
+        by that name has ever existed.
 
-        Without register_scoped here, code typed against IContainer cannot register
-        scoped dependencies even though every concrete container supports them.
+        Pinning the whole set means a method added to a concrete container but
+        forgotten on the interface -- which is what happened to register_scoped
+        -- fails here rather than surfacing later as an attr-defined error in a
+        caller typed against IContainer.
         """
-        assert {
-            "register_singletons",
-            "register_transients",
-            "register_scoped",
-        } <= IContainer.__abstractmethods__
-
-    def test_icontainer_has_resolve_method(self):
-        """Test that IContainer defines resolve abstract method."""
-        assert hasattr(IContainer, "resolve")
-        assert callable(getattr(IContainer, "resolve"))
-
-    def test_icontainer_has_clear_method(self):
-        """Test that IContainer defines clear abstract method."""
-        assert hasattr(IContainer, "clear")
-        assert callable(getattr(IContainer, "clear"))
+        assert IContainer.__abstractmethods__ == frozenset(
+            {
+                "register_singletons",
+                "register_transients",
+                "register_scoped",
+                "resolve",
+                "create_scope",
+                "clear",
+                "get_registry_copy",
+                "set_registry",
+            }
+        )
 
     def test_icontainer_implementation_requires_all_methods(self):
         """Test that implementing IContainer requires all abstract methods."""
@@ -91,6 +90,9 @@ class TestIContainerInterface:
             def get_registry_copy(self):
                 return {}
 
+            def set_registry(self, registry):
+                pass
+
         # Should not raise
         container = ConcreteContainer()
         assert isinstance(container, IContainer)
@@ -131,6 +133,9 @@ class TestIContainerInterface:
             def get_registry_copy(self):
                 return self.registry.copy()
 
+            def set_registry(self, registry):
+                self.registry = registry
+
         container = WorkingContainer()
 
         # Test register_singletons
@@ -170,6 +175,9 @@ class TestIContainerInterface:
 
             def get_registry_copy(self):
                 return {}
+
+            def set_registry(self, registry):
+                pass
 
         container = MyContainer()
         assert isinstance(container, IContainer)

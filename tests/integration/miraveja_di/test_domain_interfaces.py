@@ -91,6 +91,9 @@ class TestInterfacesIntegration:
             def get_registry_copy(self):
                 return self.registry.copy()
 
+            def set_registry(self, registry):
+                self.registry = registry
+
         class TestService:
             pass
 

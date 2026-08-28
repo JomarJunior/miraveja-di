@@ -39,6 +39,9 @@ class MockContainer(IContainer):
     def get_registry_copy(self):
         return {}
 
+    def set_registry(self, registry):
+        pass
+
 
 class TestResolverInitialization:
     """Test cases for DependencyResolver initialization."""
@@ -232,6 +235,9 @@ class TestErrorHandling:
 
             def get_registry_copy(self):
                 return {}
+
+            def set_registry(self, registry):
+                pass
 
         container = FailingContainer()
 
