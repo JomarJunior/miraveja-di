@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "miraveja-di"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lightweight type-hint based Dependency Injection container with auto-wiring for Python"
 authors = ["Jomar Júnior de Souza Pereira <jomarjunior@poli.ufrj.br>"]
 readme = "README.md"
