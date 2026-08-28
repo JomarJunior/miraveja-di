@@ -19,6 +19,9 @@ class MockContainer(IContainer):
     def register_transients(self, dependencies):
         pass
 
+    def register_scoped(self, dependencies):
+        pass
+
     def resolve(self, dependency_type):
         if dependency_type in self.resolved:
             return self.resolved[dependency_type]
@@ -213,6 +216,9 @@ class TestErrorHandling:
                 pass
 
             def register_transients(self, dependencies):
+                pass
+
+            def register_scoped(self, dependencies):
                 pass
 
             def resolve(self, dependency_type):

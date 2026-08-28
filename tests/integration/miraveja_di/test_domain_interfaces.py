@@ -4,6 +4,7 @@ from abc import ABC
 
 import pytest
 
+from miraveja_di.application.container import DIContainer
 from miraveja_di.domain.enums import Lifetime
 from miraveja_di.domain.interfaces import IContainer, ILifetimeManager, IResolver
 from miraveja_di.domain.models import DependencyMetadata
@@ -67,6 +68,13 @@ class TestInterfacesIntegration:
                     registration = Registration(dependency_type=dep_type, builder=builder, lifetime=Lifetime.TRANSIENT)
                     self.registry[dep_type] = DependencyMetadata(registration=registration)
 
+            def register_scoped(self, dependencies):
+                from miraveja_di.domain.models import Registration
+
+                for dep_type, builder in dependencies.items():
+                    registration = Registration(dependency_type=dep_type, builder=builder, lifetime=Lifetime.SCOPED)
+                    self.registry[dep_type] = DependencyMetadata(registration=registration)
+
             def resolve(self, dependency_type):
                 if dependency_type in self.registry:
                     metadata = self.registry[dependency_type]
@@ -117,3 +125,38 @@ class TestInterfacesIntegration:
         assert callable(accepts_resolver)
         assert callable(accepts_manager)
         assert callable(accepts_manager)
+
+
+class TestScopedRegistrationThroughInterface:
+    """The interface must expose everything needed to use scoped lifetimes."""
+
+    def test_scoped_dependencies_registrable_through_the_interface(self):
+        """Test that a container held as IContainer can register scoped dependencies."""
+
+        class RequestContext:
+            pass
+
+        container: IContainer = DIContainer()
+        container.register_scoped({RequestContext: lambda c: RequestContext()})
+
+        scope = container.create_scope()
+        assert scope.resolve(RequestContext) is scope.resolve(RequestContext)
+
+    def test_separate_scopes_get_separate_instances_through_the_interface(self):
+        """Test that scoping semantics survive being used through the interface."""
+
+        class RequestContext:
+            pass
+
+        container: IContainer = DIContainer()
+        container.register_scoped({RequestContext: lambda c: RequestContext()})
+
+        assert container.create_scope().resolve(RequestContext) is not (
+            container.create_scope().resolve(RequestContext)
+        )
+
+    def test_concrete_container_satisfies_the_whole_interface(self):
+        """Test that DIContainer implements every abstract method IContainer declares."""
+        assert issubclass(DIContainer, IContainer)
+        for name in IContainer.__abstractmethods__:
+            assert getattr(DIContainer, name) is not getattr(IContainer, name), name

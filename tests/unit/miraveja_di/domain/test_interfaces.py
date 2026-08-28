@@ -26,6 +26,18 @@ class TestIContainerInterface:
         assert hasattr(IContainer, "register")
         assert callable(getattr(IContainer, "register"))
 
+    def test_icontainer_declares_the_full_registration_triad(self):
+        """Test that all three lifetimes are registrable through the interface.
+
+        Without register_scoped here, code typed against IContainer cannot register
+        scoped dependencies even though every concrete container supports them.
+        """
+        assert {
+            "register_singletons",
+            "register_transients",
+            "register_scoped",
+        } <= IContainer.__abstractmethods__
+
     def test_icontainer_has_resolve_method(self):
         """Test that IContainer defines resolve abstract method."""
         assert hasattr(IContainer, "resolve")
@@ -64,6 +76,9 @@ class TestIContainerInterface:
             def register_transients(self, dependencies):
                 pass
 
+            def register_scoped(self, dependencies):
+                pass
+
             def resolve(self, dependency_type):
                 return None
 
@@ -95,6 +110,10 @@ class TestIContainerInterface:
             def register_transients(self, dependencies):
                 for dep_type, builder in dependencies.items():
                     self.registry[dep_type] = (builder, Lifetime.TRANSIENT)
+
+            def register_scoped(self, dependencies):
+                for dep_type, builder in dependencies.items():
+                    self.registry[dep_type] = (builder, Lifetime.SCOPED)
 
             def resolve(self, dependency_type):
                 if dependency_type in self.registry:
@@ -135,6 +154,9 @@ class TestIContainerInterface:
                 pass
 
             def register_transients(self, dependencies):
+                pass
+
+            def register_scoped(self, dependencies):
                 pass
 
             def resolve(self, dependency_type):

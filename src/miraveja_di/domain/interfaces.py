@@ -26,6 +26,17 @@ class IContainer(ABC):
         """
 
     @abstractmethod
+    def register_scoped(self, dependencies: Dict[Type, Callable[["IContainer"], Any]]) -> None:
+        """Register multiple scoped dependencies at once.
+
+        Scoped dependencies are created once per scope created by create_scope();
+        different scopes get different instances.
+
+        Args:
+            dependencies: A dictionary mapping types to their builder functions.
+        """
+
+    @abstractmethod
     def resolve(self, dependency_type: Type[T]) -> T:
         """Resolve and return an instance of the requested class type.
 

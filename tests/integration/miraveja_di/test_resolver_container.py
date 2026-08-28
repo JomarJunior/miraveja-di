@@ -19,6 +19,9 @@ class TestResolverContainerIntegration:
             def register_transients(self, dependencies):
                 pass
 
+            def register_scoped(self, dependencies):
+                pass
+
             def resolve(self, dependency_type):
                 resolve_calls.append(dependency_type)
                 return dependency_type()
@@ -59,6 +62,9 @@ class TestResolverContainerIntegration:
                 pass
 
             def register_transients(self, dependencies):
+                pass
+
+            def register_scoped(self, dependencies):
                 pass
 
             def resolve(self, dependency_type):
