@@ -19,6 +19,9 @@ class MockContainer(IContainer):
     def register_transients(self, dependencies):
         pass
 
+    def register_scoped(self, dependencies):
+        pass
+
     def resolve(self, dependency_type):
         if dependency_type in self.resolved:
             return self.resolved[dependency_type]
@@ -35,6 +38,9 @@ class MockContainer(IContainer):
 
     def get_registry_copy(self):
         return {}
+
+    def set_registry(self, registry):
+        pass
 
 
 class TestResolverInitialization:
@@ -215,6 +221,9 @@ class TestErrorHandling:
             def register_transients(self, dependencies):
                 pass
 
+            def register_scoped(self, dependencies):
+                pass
+
             def resolve(self, dependency_type):
                 raise ValueError("Cannot resolve")
 
@@ -226,6 +235,9 @@ class TestErrorHandling:
 
             def get_registry_copy(self):
                 return {}
+
+            def set_registry(self, registry):
+                pass
 
         container = FailingContainer()
 
